@@ -1,0 +1,3 @@
+[submodule "CS259-tests"]
+	path = CS259-tests
+	url = https://github.com/Department-of-Administrative-Affairs/CS259-tests
