@@ -1,33 +1,97 @@
 PARSER_BEGIN(Assignment)
 
 public class Assignment {
-    public static void main(String[] args) throws Exception {
-        int result = new Assignment(new java.io.StringReader(args[0])).S();
-        System.out.println(result);
+    public static void main(String[] args) throws ParseException, TokenMgrError {
+        Assignment parser = new Assignment(System.in);
+        parser.Def();
     }
 }
 
 PARSER_END(Assignment)
 
-SKIP:  { " " | "\t" | "\n" | "\r"                    }
-TOKEN: { <PLUS: "+"> | <TIMES: "*"> | <NUMBER: (["0"-"9"])+>}
-
-int S(): {int sum;}
-{
-  sum=E() <EOF> {return sum;}
+SKIP:  {
+"\t"
 }
 
-int E(): {int sum, x;}
-{
-  sum=T() ("+" x=T() {sum += x;} )* {return sum;}
+TOKEN: {
+<SPACE: " ">            |
+<ADD: "+">              |
+<MULT: "*">             |
+<DEF: "DEF">            |
+<MAIN: "MAIN">          |
+<LBRACE: "{">           |
+<RBRACE: "}">           |
+<SEMICOLON: ";">        |
+<NUMBER: (["0"-"9"])+>  |
+<FUNCT: (["A"-"Z"])+>   |
+<PARAM: (["a"-"z"])+>   |
+<LINE: ("\r\n" | "\n\r" | "\r" | "\n")>
 }
 
-int T(): {int sum, x;}
+int Def() throws NumberFormatException:
 {
-  sum=F() ("*" x=F() {sum *= x;} )* {return sum;}
+    Token t;
+    int i;
+    int value;
+
+}
+{
+    <DEF>
+    <SPACE>
+    <FUNCT>
+    <SPACE>
+    <PARAM>
+    <SPACE>
+    <LBRACE>
+    <SPACE>
+    (
+        <PARAM> |
+        <NUMBER> |
+        <ADD> |
+        <MULT>
+    )*
+    <SPACE>
+    <RBRACE>
+    <SPACE>
+    <SEMICOLON>
+    <LINE>
 }
 
-int F(): {int x; Token n;}
+int Primary() throws NumberFormatException:
 {
-  n=<NUMBER> {return Integer.parseInt(n.image);}
+    Token t;
+}
+{
+    t = <NUMBER>
+    {return Integer.parseInt(t.image);}
+}
+
+int Term() throws NumberFormatException:
+{
+    int i;
+    int value;
+}
+{
+    value = Primary()
+    (
+        <MULT>
+        i = Primary()
+        {value *= i;}
+    )*
+    {return value;}
+}
+
+int Expression() throws NumberFormatException:
+{
+    int i;
+    int value;
+}
+{
+    value = Term()
+    (
+        <ADD>
+        i = Term()
+        {value += i;}
+    )*
+    {return value;}
 }
