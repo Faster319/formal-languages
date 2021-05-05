@@ -1,9 +1,74 @@
+options {
+    STATIC = false;
+}
+
+
 PARSER_BEGIN(Assignment)
+import java.util.Stack;
 
 public class Assignment {
-    public static void main(String[] args) throws ParseException, TokenMgrError {
-        Assignment parser = new Assignment(System.in);
-        parser.Def();
+    public static void main(String[] args) throws ParseException, TokenMgrError, NumberFormatException {
+        try {
+            String newString = "";
+            Assignment parser = new Assignment(System.in);
+            Stack<String> operators = new Stack<>();
+            parser.Def(operators);
+            System.out.println("PASS");
+            while (!operators.isEmpty()) {
+                newString += operators.pop();
+            }
+            int result = AST.answer(AST.infixToRPN(newString));
+            System.out.println(result);
+
+        } catch (ParseException e) {
+            System.out.println("FAIL");
+            System.err.println(e.currentToken.next.beginLine);
+        }
+    }
+}
+
+class AST {
+    static String infixToRPN(String expression) {
+        Stack<Character> stack = new Stack<>();
+        String output = "";
+
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+
+            if (Character.isDigit(c)) {
+                output += c;
+            } else {
+                while (!stack.isEmpty() && c == '+') {
+                    output += stack.pop();
+                }
+                stack.push(c);
+            }
+        }
+
+        while (!stack.isEmpty()) {
+            output += stack.pop();
+        }
+        return output;
+    }
+
+    static int answer(String output) {
+        Stack<Integer> stack = new Stack<>();
+        for (int i = 0; i < output.length(); i++) {
+            char c = output.charAt(i);
+
+            if (Character.isDigit(c)) {
+                stack.push(Character.getNumericValue(c));
+            } else if (c == '+') {
+                int second = stack.pop();
+                int first = stack.pop();
+                stack.push(first + second);
+            } else if (c == '*') {
+                int second = stack.pop();
+                int first = stack.pop();
+                stack.push(first * second);
+            }
+        }
+        return stack.pop();
     }
 }
 
@@ -28,12 +93,9 @@ TOKEN: {
 <LINE: ("\r\n" | "\n\r" | "\r" | "\n")>
 }
 
-int Def() throws NumberFormatException:
+void Def(Stack<String> operators) throws NumberFormatException:
 {
-    Token t;
-    int i;
-    int value;
-
+    Token n, a, m;
 }
 {
     <DEF>
@@ -44,54 +106,12 @@ int Def() throws NumberFormatException:
     <SPACE>
     <LBRACE>
     <SPACE>
-    (
-        <PARAM> |
-        <NUMBER> |
-        <ADD> |
-        <MULT>
-    )*
+    (n = <NUMBER> {operators.push(n.image);}|
+     a = <ADD> {operators.push(a.image);}|
+     m = <MULT> {operators.push(m.image);})*
     <SPACE>
     <RBRACE>
     <SPACE>
     <SEMICOLON>
     <LINE>
-}
-
-int Primary() throws NumberFormatException:
-{
-    Token t;
-}
-{
-    t = <NUMBER>
-    {return Integer.parseInt(t.image);}
-}
-
-int Term() throws NumberFormatException:
-{
-    int i;
-    int value;
-}
-{
-    value = Primary()
-    (
-        <MULT>
-        i = Primary()
-        {value *= i;}
-    )*
-    {return value;}
-}
-
-int Expression() throws NumberFormatException:
-{
-    int i;
-    int value;
-}
-{
-    value = Term()
-    (
-        <ADD>
-        i = Term()
-        {value += i;}
-    )*
-    {return value;}
 }
