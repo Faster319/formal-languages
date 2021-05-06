@@ -1,0 +1,2 @@
+DEF TESTPRIME x { 3+x } ;
+DEF MAIN { TESTPRIME(4) } ;

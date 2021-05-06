@@ -4,60 +4,162 @@ options {
 
 
 PARSER_BEGIN(Assignment)
+import java.util.HashMap;
 import java.util.Stack;
+import java.util.ArrayList;
 
 public class Assignment {
+
+    /**
+    * Takes in a PLM (Programming Language of the Moment) program and computes non-negative integers.
+    */
     public static void main(String[] args) throws ParseException, TokenMgrError, NumberFormatException {
         try {
-            String newString = "";
+            // Get parser from input.
             Assignment parser = new Assignment(System.in);
-            Stack<String> operators = new Stack<>();
-            parser.Def(operators);
-            System.out.println("PASS");
-            while (!operators.isEmpty()) {
-                newString += operators.pop();
+
+            String infixString = "";                                // String to store the infix notation of function.
+            Stack<String> operators = new Stack<>();                // Stack to store all the operators to be evaluated.
+            ArrayList<String> functs = new ArrayList<>();           // Array list to store the function definitions.
+            HashMap<String, Integer> functs_line = new HashMap<>(); // Hashmap to store the called functions and it's corresponding line number.
+
+            // Calling parser.
+            parser.Def(operators, functs, functs_line);
+
+            // Loops through all the called functions and checks if it's present in the functions that have been defined.
+            for (String i : functs_line.keySet()) {
+                if (!functs.contains(i)) {
+                    throw new ParseException(functs_line.get(i) + "\n" + "Function does not exist.");
+                }
             }
-            int result = AST.answer(AST.infixToRPN(newString));
+
+            // At this point PLM has been parsed successfully.
+            System.out.println("PASS");
+
+            // Appending string to all the operators in the stack to be evaluated.
+            while (!operators.isEmpty()) {
+                infixString += operators.pop();
+            }
+            // Prints result by calling firstly the infix to Reverse Polish Notation and then evaluating the answer both from the class AST.
+            int result = AST.answer(AST.infixToRPN(infixString));
             System.out.println(result);
 
+        // If any exceptions has occurred during the parsing of the PLM program.
         } catch (ParseException e) {
             System.out.println("FAIL");
-            System.err.println(e.currentToken.next.beginLine);
+
+            // Exception only containing a message that was thrown in the parse class.
+            if (e.expectedTokenSequences == null) {
+                System.err.println(e.getMessage());
+            // Proper exceptions that was caught during parsing.
+            } else {
+                // Prints line number at which the exception occurred at.
+                System.err.println(e.currentToken.next.beginLine);
+                // Gets the token that the parser was expecting at the time when the exception occurred.
+                // Goes through each case of what the expected token is and prints the appropriate error message.
+                switch(e.tokenImage[e.expectedTokenSequences[0][0]]) {
+                    case "\"DEF\"":
+                        System.err.println("Missing DEF Keyword.");
+                        break;
+                    case "\"MAIN\"":
+                        // If keyword 'DEF' is used as a function name.
+                        if (e.currentToken.next.image.equals("DEF")) {
+                            System.err.println("DEF cannot be used as a function name.");
+                        } else {
+                            System.err.println("Missing function name.");
+                        }
+                        break;
+                    case "\" \"":
+                        System.err.println("Missing space.");
+                        break;
+                    case "<PARAM>":
+                        System.err.println("Missing parameter name.");
+                        break;
+                    case "\"{\"":
+                        System.err.println("Missing left brace.");
+                        break;
+                    case "\"}\"":
+                        System.err.println("Missing right brace.");
+                        break;
+                    case "\";\"":
+                        System.err.println("Missing semicolon.");
+                        break;
+                    case "\"(\"":
+                        System.err.println("Missing left bracket.");
+                        break;
+                    case "\")\"":
+                        System.err.println("Missing right bracket.");
+                        break;
+                    case "<NUMBER>": case "\"+\"": case "\"*\"": case "<LINE>":
+                        System.err.println("Must be an non-empty arithmetic expression built from non-negative integers," +
+                         " parameter name or function calls. Using addition and multiplication");
+                        break;
+                }
+            }
         }
     }
 }
 
+/** Implementation of an abstract syntax tree.
+* Converting from infix notation to reverse polish notation.
+* And evaluates the RPN.
+*/
 class AST {
+
+    /**
+    * Takes in a string expression in the infix notation and converts to reverse polish notation.
+    * 3 + 4 -> 3 4 +
+    * @param expression a string in the infix notation.
+    * @return output the same expression string but in RPN notation.
+    */
     static String infixToRPN(String expression) {
+        // Stack to store the operators which will be appended to the output string.
         Stack<Character> stack = new Stack<>();
         String output = "";
 
+        // Loops through all characters in the expression.
         for (int i = 0; i < expression.length(); i++) {
             char c = expression.charAt(i);
 
+            // If character is a digit, we append it to the output string.
             if (Character.isDigit(c)) {
                 output += c;
             } else {
+                // If the stack isn't empty and the operator found is a '+', we pop the top element from the stack.
+                // '+' has a higher precedence than '*'.
                 while (!stack.isEmpty() && c == '+') {
                     output += stack.pop();
                 }
+                // If '*' was found, we push it onto the operator stack or if it was empty, then '+' will be added.
                 stack.push(c);
             }
         }
 
+        // After reading the expression, the operators are popped off the stack and appended onto the output string.
         while (!stack.isEmpty()) {
             output += stack.pop();
         }
         return output;
     }
 
+    /**
+    * Takes in a string output in RPN notation and evaluates it from left to right.
+    * @param output a string in RPN notation.
+    * @return answer an integer that is the evaluation of the expression given.
+    */
     static int answer(String output) {
+        // Stack to store the digits found in the expression.
         Stack<Integer> stack = new Stack<>();
+
+        // Loops through each character of the expression
         for (int i = 0; i < output.length(); i++) {
             char c = output.charAt(i);
 
+            // If character found is a digit, we push it onto the digit stack.
             if (Character.isDigit(c)) {
                 stack.push(Character.getNumericValue(c));
+            // If character found is a plus, we pop the topmost two elements and execute the operation.
+            // Result gets pushed back onto the stack. Vice versa for if we find multiply.
             } else if (c == '+') {
                 int second = stack.pop();
                 int first = stack.pop();
@@ -68,16 +170,19 @@ class AST {
                 stack.push(first * second);
             }
         }
+        // There will only be one element left in the stack, which will be the result of the evaluation.
         return stack.pop();
     }
 }
 
 PARSER_END(Assignment)
 
+// List of tokens that will not be parsed, in this case tab spaces are ignored.
 SKIP:  {
 "\t"
 }
 
+// List of tokens that will be parsed.
 TOKEN: {
 <SPACE: " ">            |
 <ADD: "+">              |
@@ -86,32 +191,193 @@ TOKEN: {
 <MAIN: "MAIN">          |
 <LBRACE: "{">           |
 <RBRACE: "}">           |
+<LBRACKET: "(">         |
+<RBRACKET: ")">         |
 <SEMICOLON: ";">        |
 <NUMBER: (["0"-"9"])+>  |
 <FUNCT: (["A"-"Z"])+>   |
 <PARAM: (["a"-"z"])+>   |
+<SYMBOLS: ("-"|"/"|"^"|"%"|"!"|"£"|"$"|"_"|"["|"]"|"#"|"~"|"?"|"|"|":"|"'"|"@"|"`"|","|"."|"=")> |
 <LINE: ("\r\n" | "\n\r" | "\r" | "\n")>
 }
 
-void Def(Stack<String> operators) throws NumberFormatException:
+/**
+* Start of the parser, tries to find the <DEF> token, then a <SPACE> token.
+* Depending on the next token goes to a different parser function.
+* <MAIN> goes to Main(operators, functs, functs_lines) function, <FUNCT> goes to Function_no_main(operators, functs, functs_lines) as at this point no MAIN function has been defined yet.
+* If <FUNCT> happens to be the next token found, then we add it's image to the array list of defined functions.
+* If at any point parser doesn't finf the right token, a ParserException is thrown and an appropriate error is message is printed.
+* @param operators a stack that will contain the expression to be evaluated.
+* @param functs an array list that will contain the function that have been defined.
+* @param functs_line a hashmap that will contain the functions that have been called.
+*/
+void Def(Stack<String> operators, ArrayList<String> functs, HashMap<String,Integer> functs_lines) throws NumberFormatException:
 {
-    Token n, a, m;
+    Token f;
 }
 {
     <DEF>
     <SPACE>
-    <FUNCT>
-    <SPACE>
-    <PARAM>
+    (<MAIN> Main(operators, functs, functs_lines) | f = <FUNCT> {functs.add(f.image);} Function_no_main(operators, functs, functs_lines))
+}
+
+/**
+* From the original Def method, if we encounter a <MAIN> token, we move to the Main function as a main function doesn't contain a parameter and is different to a normal fucntion.
+* Where we follow the function defintion for main, so far DEF MAIN --> DEF MAIN { 0 } ;
+* For the function body, the start has to either be a number, or a function call, after it can be any combination of an operator (+|*) or (number|function call).
+* BUT follows the order that for every operator, a number or function call must come after it.
+* After each number and operator we encounter, they all get pushed onto the operator stack to be evaluated.
+* After every function call, we put the image and the corresponding line number into the hashmap and parser goes to the Function_call method where it follows the defintion for a called function.
+* As the MAIN function does not contain any parameters we do not need to give a parameter for the Function_call method.
+* After the function body we follow the rest of the definiton of the MAIN function.
+* At the end the parser, if the file does not contain any more functions, the parser terminated, else we go to the Function_with_main method as there can only be non-MAIN functions from now.
+* @param operators a stack that will contain the expression to be evaluated.
+* @param functs an array list that will contain the function that have been defined.
+* @param functs_line a hashmap that will contain the functions that have been called.
+*/
+void Main(Stack<String> operators, ArrayList<String> functs, HashMap<String,Integer> functs_lines) throws NumberFormatException:
+{
+    Token n, a, m, f;
+}
+{
     <SPACE>
     <LBRACE>
     <SPACE>
-    (n = <NUMBER> {operators.push(n.image);}|
-     a = <ADD> {operators.push(a.image);}|
-     m = <MULT> {operators.push(m.image);})*
+    (n = <NUMBER> {operators.push(n.image);} | f = <FUNCT> {functs_lines.put(f.image, f.beginLine);} Function_call(operators, functs_lines, null))
+    (
+       (a = <ADD> {operators.push(a.image);} | m = <MULT> {operators.push(m.image);})
+       (n = <NUMBER> {operators.push(n.image);} | f = <FUNCT> {functs_lines.put(f.image, f.beginLine);} Function_call(operators, functs_lines, null))
+    )*
     <SPACE>
     <RBRACE>
     <SPACE>
     <SEMICOLON>
     <LINE>
+    (<EOF> | Function_with_main(operators, functs, functs_lines))
+}
+
+/**
+* From the original Def method after a <FUNCT> token has occurred.
+* This follows the same format as the previous Main method except this function will contain parameters.
+* We store the token variable for the <PARAM> to be used later.
+* Now when we get into the function body, we can start with number, function call or a parameter.
+* If we encounter a <PARAM> in the function body, we check if this equals to the parameter defined at the beginning of the function defintion.
+* If the parameters are not equal we throw a ParseException with appropriate message, else we continue as normal.
+* We follow the same format as Main method until the end, where the next token must be a <DEF> because at this point we have not defined a MAIN function,
+* So if the next token is anything but <DEF> it must mean the file has ended, and no MAIN function has been defined so we throw a ParseException with appropriate message at this point.
+* Else we go to the Def_no_main method, which is just the normal Def method except without the <DEF> token as we have already encountered so we cannot use the same method.
+* @param operators a stack that will contain the expression to be evaluated.
+* @param functs an array list that will contain the function that have been defined.
+* @param functs_line a hashmap that will contain the functions that have been called.
+*/
+void Function_no_main(Stack<String> operators, ArrayList<String> functs, HashMap<String,Integer> functs_lines) throws NumberFormatException:
+{
+    Token p1, p2, f;
+}
+{
+    <SPACE>
+    p1 = <PARAM>
+    <SPACE>
+    <LBRACE>
+    <SPACE>
+    (<NUMBER> | f = <FUNCT> {functs_lines.put(f.image, f.beginLine);} Function_call(operators, functs_lines, p1) |
+     p2 = <PARAM> {if (!p1.image.equals(p2.image)) throw new ParseException(p2.beginLine + "\n" + "Parameter is not the same parameter specified for function.");})
+    (
+       (<ADD> | <MULT> )
+       (<NUMBER> | f = <FUNCT> {functs_lines.put(f.image, f.beginLine);} Function_call(operators, functs_lines, p1) |
+        p2 = <PARAM> {if (!p1.image.equals(p2.image)) throw new ParseException(p2.beginLine + "\n" + "Parameter is not the same parameter specified for function.");})
+    )*
+    <SPACE>
+    <RBRACE>
+    <SPACE>
+    <SEMICOLON>
+    <LINE>
+    (<DEF> | {throw new ParseException("0" + "\n" + "Missing MAIN function.");})
+    Def_no_main(operators, functs, functs_lines)
+}
+
+/**
+* From the Function_no_main method, i.e. the first function that has been defined so far.
+* This simply follows the definition of the next function which can be either a MAIN function as we have not encountered it yet, or another Non-MAIN function.
+* If the token is <FUNCT> we check if the image of this token is contained in the array list where we store the defined functions.
+* If the function name is equal to a function that has already been defined, we throw a ParseException with appropriate message.
+* If the token is <MAIN> we go to the Main method to define the MAIN method, if it's yet another Non-MAIN function we go back to the Function_no_main method as a MAIN function still needs to be defined.
+* Essentially a loop until we MAIN function is defined.
+* @param operators a stack that will contain the expression to be evaluated.
+* @param functs an array list that will contain the function that have been defined.
+* @param functs_line a hashmap that will contain the functions that have been called.
+*/
+void Def_no_main(Stack<String> operators, ArrayList<String> functs, HashMap<String,Integer> functs_lines) throws NumberFormatException:
+{
+    Token f;
+}
+{
+    <SPACE>
+    (<MAIN> Main(operators, functs, functs_lines) | f = <FUNCT> {if (functs.contains(f.image)) throw new ParseException(f.beginLine + "\n" + "No function can be defined twice.");} {functs.add(f.image);} Function_no_main(operators, functs, functs_lines))
+}
+
+/**
+* From the Main method, this follows exactly as the Function_no_main method except we start from the beginning of the definiton with <DEF>.
+* When the parser reaches the <FUNCT>, alongside checking if it's already been defined, if the parser finds it is equal to 'MAIN' then a ParseException is thrown with appropriate message.
+* As we cannot have 2 MAIN functions defined in a program.
+* The rest follows exactly as Function_no_main method except at the end the file is allowed to end as we have a MAIN function defined so it would be fine if the file ended now.
+* Else if there is another function in the next line then this method is called again in a loop parsing through as many functions as present.
+* @param operators a stack that will contain the expression to be evaluated.
+* @param functs an array list that will contain the function that have been defined.
+* @param functs_line a hashmap that will contain the functions that have been called.
+*/
+void Function_with_main(Stack<String> operators, ArrayList<String> functs, HashMap<String,Integer> functs_lines) throws NumberFormatException:
+{
+    Token p1, p2, f1, f2;
+}
+{
+    <DEF>
+    <SPACE>
+    (f1 = <FUNCT> {if (functs.contains(f1.image)) throw new ParseException(f1.beginLine + "\n" + "No function can be defined twice.");} {functs.add(f1.image);} |
+     {if (getToken(1).image.equals("MAIN")) throw new ParseException(getToken(1).beginLine + "\n" + "Main function cannot be defined twice.");})
+    <SPACE>
+    p1 = <PARAM>
+    <SPACE>
+    <LBRACE>
+    <SPACE>
+    (<NUMBER> | f2 = <FUNCT> {functs_lines.put(f2.image, f2.beginLine);} Function_call(operators, functs_lines, p1) |
+     p2 = <PARAM> {if (!p1.image.equals(p2.image)) throw new ParseException(p2.beginLine + "\n" + "Parameter is not the same parameter specified for function.");})
+    (
+       (<ADD> | <MULT> )
+       (<NUMBER> | f2 = <FUNCT> {functs_lines.put(f2.image, f2.beginLine);} Function_call(operators, functs_lines, p1) |
+        p2 = <PARAM> {if (!p1.image.equals(p2.image)) throw new ParseException(p2.beginLine + "\n" + "Parameter is not the same parameter specified for function.");})
+    )*
+    <SPACE>
+    <RBRACE>
+    <SPACE>
+    <SEMICOLON>
+    <LINE>
+    (<EOF> | Function_with_main(operators, functs, functs_lines))
+}
+
+/**
+* This method is called whenever in any function MAIN or Non-MAIN, in the function body, a function is called.
+* This method parses through the call to see if it is fine.
+* We check if it starts with a left bracket right after the name of the function, then inside the bracket as in previous method, number, function call or parameter.
+* Then any combination of (+|*) and (Number|FunctionCall|Parameter).
+* We also check if a parameter is present in this function call that was made from a MAIN method which defines no parameters, so we throw a ParseException with an appropriate message.
+* Parses the closing bracket and then goes back to the method it came from.
+* @param operators a stack that will contain the expression to be evaluated.
+* @param functs an array list that will contain the function that have been defined.
+* @param functs_line a hashmap that will contain the functions that have been called.
+*/
+void Function_call(Stack<String> operators, HashMap<String,Integer> functs_lines, Token p1) throws NumberFormatException:
+{
+    Token n, a, m, p2, f;
+}
+{
+    <LBRACKET>
+    (n = <NUMBER> {operators.push(n.image);} | f = <FUNCT> {functs_lines.put(f.image, f.beginLine);} Function_call(operators, functs_lines, p1) |
+     p2 = <PARAM> {if (p1 == null || !p1.image.equals(p2.image)) throw new ParseException(p2.beginLine + "\n" + "Parameter is not the same parameter specified for function.");})
+    (
+        (a = <ADD> {operators.push(a.image);} | m = <MULT> {operators.push(m.image);})
+        (n = <NUMBER> {operators.push(n.image);} | f = <FUNCT> {functs_lines.put(f.image, f.beginLine);} Function_call(operators, functs_lines, p1) |
+         p2 = <PARAM> {if (p1 == null || !p1.image.equals(p2.image)) throw new ParseException(p2.beginLine + "\n" + "Parameter is not the same parameter specified for function.");})
+    )*
+    <RBRACKET>
 }
