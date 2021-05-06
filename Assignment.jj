@@ -18,10 +18,10 @@ public class Assignment {
             // Get parser from input.
             Assignment parser = new Assignment(System.in);
 
-            String infixString = "";                                // String to store the infix notation of function.
-            Stack<String> operators = new Stack<>();                // Stack to store all the operators to be evaluated.
-            ArrayList<String> functs = new ArrayList<>();           // Array list to store the function definitions.
-            HashMap<String, Integer> functs_line = new HashMap<>(); // Hashmap to store the called functions and it's corresponding line number.
+            String infixString = "";                                               // String to store the infix notation of function.
+            Stack<String> operators = new Stack<String>();                         // Stack to store all the operators to be evaluated.
+            ArrayList<String> functs = new ArrayList<String>();                    // Array list to store the function definitions.
+            HashMap<String, Integer> functs_line = new HashMap<String, Integer>(); // Hashmap to store the called functions and it's corresponding line number.
 
             // Calling parser.
             parser.Def(operators, functs, functs_line);
@@ -114,7 +114,7 @@ class AST {
     */
     static String infixToRPN(String expression) {
         // Stack to store the operators which will be appended to the output string.
-        Stack<Character> stack = new Stack<>();
+        Stack<Character> stack = new Stack<Character>();
         String output = "";
 
         // Loops through all characters in the expression.
@@ -149,7 +149,7 @@ class AST {
     */
     static int answer(String output) {
         // Stack to store the digits found in the expression.
-        Stack<Integer> stack = new Stack<>();
+        Stack<Integer> stack = new Stack<Integer>();
 
         // Loops through each character of the expression
         for (int i = 0; i < output.length(); i++) {
